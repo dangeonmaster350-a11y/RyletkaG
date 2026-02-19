@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 Рулетка подарков</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Telegram Web App -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- Шапка -->
+        <header class="header">
+            <div class="user-info">
+                <span class="stars">⭐️ <span id="starsCount">0</span></span>
+                <button class="profile-btn" onclick="showProfile()">👤</button>
+            </div>
+            <h1 class="title">🎰 РУЛЕТКА</h1>
+        </header>
+
+        <!-- Основное меню -->
+        <div id="mainMenu" class="menu">
+            <button class="menu-btn spin-btn" onclick="showSpinMenu()">
+                <span class="emoji">🎰</span>
+                <span>Крутить рулетку</span>
+            </button>
+            
+            <button class="menu-btn" onclick="showInventory()">
+                <span class="emoji">🎁</span>
+                <span>Мои подарки</span>
+                <span class="badge" id="inventoryCount">0</span>
+            </button>
+            
+            <button class="menu-btn" onclick="showShop()">
+                <span class="emoji">💰</span>
+                <span>Магазин</span>
+            </button>
+            
+            <button class="menu-btn" onclick="showWithdrawals()">
+                <span class="emoji">💸</span>
+                <span>Вывод</span>
+            </button>
+            
+            <!-- Кнопка для админов (будет показана только админам) -->
+            <button class="menu-btn admin-btn" id="adminBtn" onclick="goToAdmin()" style="display: none;">
+                <span class="emoji">⚙️</span>
+                <span>Админ панель</span>
+            </button>
+        </div>
+
+        <!-- Контентные секции -->
+        <div id="content" class="content"></div>
+
+        <!-- Нижняя навигация -->
+        <nav class="bottom-nav">
+            <button onclick="showMainMenu()">🏠 Главная</button>
+            <button onclick="showSpinMenu()">🎰 Рулетка</button>
+            <button onclick="showInventory()">🎁 Подарки</button>
+            <button onclick="showProfile()">👤 Профиль</button>
+        </nav>
+    </div>
+
+    <!-- Модальные окна -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Подключение скриптов -->
+    <script src="script.js"></script>
+</body>
+</html>

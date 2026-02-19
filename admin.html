@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚙️ Админ панель</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1 class="title">⚙️ АДМИН ПАНЕЛЬ</h1>
+            <button class="profile-btn" onclick="window.location.href='index.html'">🏠</button>
+        </header>
+
+        <div class="menu">
+            <button class="menu-btn" onclick="showUsers()">
+                <span class="emoji">👥</span>
+                <span>Пользователи</span>
+            </button>
+            
+            <button class="menu-btn" onclick="showWithdrawals()">
+                <span class="emoji">💰</span>
+                <span>Заявки на вывод</span>
+            </button>
+            
+            <button class="menu-btn" onclick="showBanUser()">
+                <span class="emoji">🔨</span>
+                <span>Забанить пользователя</span>
+            </button>
+            
+            <button class="menu-btn" onclick="showGiveGift()">
+                <span class="emoji">🎁</span>
+                <span>Выдать подарок</span>
+            </button>
+            
+            <button class="menu-btn" onclick="showGiveStars()">
+                <span class="emoji">⭐️</span>
+                <span>Выдать звезды</span>
+            </button>
+            
+            <button class="menu-btn" onclick="showStats()">
+                <span class="emoji">📊</span>
+                <span>Статистика</span>
+            </button>
+        </div>
+
+        <div id="content" class="content">
+            <h2>Добро пожаловать в админ панель</h2>
+            <p>Выберите действие</p>
+        </div>
+
+        <nav class="bottom-nav">
+            <button onclick="window.location.href='index.html'">🏠 Главная</button>
+            <button onclick="showUsers()">👥 Пользователи</button>
+            <button onclick="showWithdrawals()">💰 Выводы</button>
+            <button onclick="showStats()">📊 Статистика</button>
+        </nav>
+    </div>
+
+    <script>
+        const ADMIN_IDS = [123456789]; // Ваш Telegram ID
+        
+        // Проверка прав доступа
+        const tg = window.Telegram.WebApp;
+        const userId = tg.initDataUnsafe?.user?.id;
+        
+        if (!ADMIN_IDS.includes(userId)) {
+            alert('❌ Доступ запрещен!');
+            window.location.href = 'index.html';
+        }
+
+        // Получение всех пользователей из localStorage
+        function getAllUsers() {
+            const users = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('stars_')) {
+                    const userId = key.replace('stars_', '');
+                    users.push({
+                        id: userId,
+                        stars: parseInt(localStorage.getItem(key)),
+                        inventory: JSON.parse(localStorage.getItem(`inventory_${userId}`) || '[]')
+                    });
+                }
+            }
+            return users;
+        }
+
+        // Показать список пользователей
+        function showUsers() {
+            const users = getAllUsers();
+            let html = '<h2>👥 Пользователи</h2>';
+            
+            users.forEach(user => {
+                html += `
+                    <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 10px;">
+                        <p><strong>ID:</strong> ${user.id}</p>
+                        <p><strong>⭐️ Звезд:</strong> ${user.stars}</p>
+                        <p><strong>🎁 Подарков:</strong> ${user.inventory.length}</p>
+                        <button class="btn" onclick="banUser('${user.id}')">🔨 Забанить</button>
+                        <button class="btn" onclick="giveStars('${user.id}')">⭐️ Выдать звезды</button>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('content').innerHTML = html;
+        }
+
+        // Показать заявки на вывод
+        function showWithdrawals() {
+            let withdrawals = [];
+            
+            // Сбор всех заявок
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('withdrawals_')) {
+                    const userWithdrawals = JSON.parse(localStorage.getItem(key) || '[]');
+                    withdrawals = withdrawals.concat(userWithdrawals);
+                }
+            }
+            
+            const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending');
+            
+            let html = '<h2>💰 Заявки на вывод</h2>';
+            
+            if (pendingWithdrawals.length === 0) {
+                html += '<p>Нет активных заявок</p>';
+            } else {
+                pendingWithdrawals.forEach(w => {
+                    const daysLeft = Math.ceil((new Date(w.expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
+                    
+                    html += `
+                        <div style="background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 10px;">
+                            <p><strong>ID заявки:</strong> ${w.id}</p>
+                            <p><strong>Пользователь:</strong> @${w.username}</p>
+                            <p><strong>Подарок:</strong> ${w.giftEmoji} ${w.giftName}</p>
+                            <p><strong>Дата:</strong> ${new Date(w.date).toLocaleDateString()}</p>
+                            <p><strong>Осталось дней:</strong> ${daysLeft}</p>
+                            <button class="btn" onclick="approveWithdrawal(${w.id})">✅ Подтвердить</button>
+                            <button class="btn btn-secondary" onclick="rejectWithdrawal(${w.id})">❌ Отклонить</button>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('content').innerHTML = html;
+        }
+
+        // Подтвердить вывод
+        function approveWithdrawal(withdrawalId) {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('withdrawals_')) {
+                    let withdrawals = JSON.parse(localStorage.getItem(key) || '[]');
+                    const index = withdrawals.findIndex(w => w.id === withdrawalId);
+                    
+                    if (index !== -1) {
+                        withdrawals[index].status = 'approved';
+                        localStorage.setItem(key, JSON.stringify(withdrawals));
+                        
+                        alert('✅ Заявка подтверждена!');
+                        showWithdrawals();
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Отклонить вывод
+        function rejectWithdrawal(withdrawalId) {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('withdrawals_')) {
+                    let withdrawals = JSON.parse(localStorage.getItem(key) || '[]');
+                    const index = withdrawals.findIndex(w => w.id === withdrawalId);
+                    
+                    if (index !== -1) {
+                        withdrawals[index].status = 'rejected';
+                        localStorage.setItem(key, JSON.stringify(withdrawals));
+                        
+                        alert('❌ Заявка отклонена!');
+                        showWithdrawals();
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Забанить пользователя
+        function banUser(userId) {
+            localStorage.setItem(`banned_${userId}`, 'true');
+            alert(`✅ Пользователь ${userId} забанен`);
+            showUsers();
+        }
+
+        // Выдать звезды
+        function giveStars(userId) {
+            const amount = prompt('Введите количество звезд:');
+            if (amount) {
+                const currentStars = parseInt(localStorage.getItem(`stars_${userId}`) || '0');
+                localStorage.setItem(`stars_${userId}`, currentStars + parseInt(amount));
+                alert(`✅ Выдано ${amount} ⭐️ пользователю ${userId}`);
+                showUsers();
+            }
+        }
+
+        // Показать статистику
+        function showStats() {
+            const users = getAllUsers();
+            let totalStars = 0;
+            let totalGifts = 0;
+            
+            users.forEach(user => {
+                totalStars += user.stars;
+                totalGifts += user.inventory.length;
+            });
+            
+            const html = `
+                <h2>📊 Статистика</h2>
+                <div style="margin: 20px 0;">
+                    <p><strong>👥 Всего пользователей:</strong> ${users.length}</p>
+                    <p><strong>⭐️ Всего звезд:</strong> ${totalStars}</p>
+                    <p><strong>🎁 Всего подарков:</strong> ${totalGifts}</p>
+                    <p><strong>⏳ Активных заявок:</strong> ${document.querySelectorAll('.pending-withdrawal').length}</p>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
